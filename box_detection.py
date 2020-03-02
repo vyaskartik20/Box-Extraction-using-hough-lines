@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import os
-
+from transform_example import transfer
 
 def sort_contours(cnts, method="left-to-right"):
     # initialize the reverse flag and sort index
@@ -29,14 +29,24 @@ def sort_contours(cnts, method="left-to-right"):
 def box_extraction(img_for_box_extraction_path, cropped_dir_path):
 
     img = cv2.imread(img_for_box_extraction_path, 0)  # Read the image
+    img2 = cv2.imread(img_for_box_extraction_path, 0)
+    # img = cv2.blur(img,(10,10))
     (thresh, img_bin) = cv2.threshold(img, 128, 255,
                                       cv2.THRESH_BINARY | cv2.THRESH_OTSU)  # Thresholding the image
     img_bin = 255-img_bin  # Invert the image
 
+    # img = np.full((100,80,3), 12, np.uint8)
+
+
+    # threshold image
+    # ret, threshed_img = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY),
+                    # 127, 255, cv2.THRESH_BINARY)
+    img = cv2.blur(img,(20,20))
+
     cv2.imwrite("Image_bin.jpg",img_bin)
 
     # Defining a kernel length
-    kernel_length = np.array(img).shape[1]//40
+    kernel_length = np.array(img).shape[1]//400
 
     # A verticle kernel of (1 X kernel_length), which will detect all the verticle lines from the image.
     verticle_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, kernel_length))
@@ -68,7 +78,7 @@ def box_extraction(img_for_box_extraction_path, cropped_dir_path):
     cv2.imwrite("img_final_bin.jpg",img_final_bin)
     # Find contours for image, which will detect all the boxes
     contours, hierarchy = cv2.findContours(
-        img_final_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        img_final_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     # print(len(contours))
     # Sort all the contours by top to bottom.
     (contours, boundingBoxes) = sort_contours(contours, method="left-to-right")
@@ -86,18 +96,110 @@ def box_extraction(img_for_box_extraction_path, cropped_dir_path):
 
 
             if ((x>(x1+20))):
-                if (w > 400 and h > 60) and (h > 1.5*w):
+            # if ((x==x1)):
+                if (w > 400 and h > 60) and (h > 1.3*w):
                     idx += 1
-                    # print (x1)
-                    # print ("    ")
-                    # print(x)
-                    # print ("\n")
-                    # print (x)
-                    # print ("\n")
-                    new_img = img[y:y+h, x:x+w]
+
+                    rect = cv2.minAreaRect(c)
+                    box = cv2.boxPoints(rect)
+
+                    box = np.int0(box)
+                    # draw a red 'nghien' rectangle
+                    cv2.drawContours(img, [box], 0, (0, 0, 255))
+                    cv2.imwrite("contour1.png", img)
+                    # finally, get the min enclosing circle
+
+
+                    # hull = cv.c(points[, hull[, clockwise[, returnPoints]]
+                    # hull = cv2.convexHull(c)
+                    # print(hull)
+
+
+
+                    # extLeft = tuple(c[c[:, :, 0].argmin()][0])
+                    # extRight = tuple(c[c[:, :, 0].argmax()][0])
+                    # extTop = tuple(c[c[:, :, 1].argmin()][0])
+                    # extBot = tuple(c[c[:, :, 1].argmax()][0])
+
+                    # hull = []
+                    #
+                    # # calculate points for each contour
+                    #
+                    # hull.append(cv2.convexHull(c, False))
+                    #
+                    # # create an empty black image
+                    # drawing = np.zeros((thresh.shape[0], thresh.shape[1], 3), np.uint8)
+                    #
+                    # # draw contours and hull points
+                    #
+                    # color_contours = (0, 255, 0) # color for contours
+                    # color = (255, 255, 255) # color for convex hull
+                    # # draw contours
+                    # cv2.drawContours(drawing, contours, i, color_contours, 2, 8, hierarchy)
+                    # # draw convex hull
+                    # cv2.drawContours(drawing, hull, i, color, 2, 8)
+
+
+                    extTop="(%s, %s)" %(box[1][0],box[1][1])
+                    extRight="(%s, %s)" %(box[2][0],box[2][1])
+                    extBot="(%s, %s)" %(box[3][0],box[3][1])
+                    extLeft="(%s, %s)" %(box[0][0],box[0][1])
+
+                    coords="[%s, %s, %s, %s]" %(extTop,extRight,extBot,extLeft)
+
+                    new_img = transfer(img2, coords)
                     cv2.imwrite(cropped_dir_path+str(idx) + '.png', new_img)
+
+
+
+                    box = np.int0(box)
+                    # draw a red 'nghien' rectangle
+                    cv2.drawContours(img, [box], 0, (0, 0, 255))
+                    cv2.imwrite("contour1.png", img)
+                    # coords="[(189.96536, 1084.9089), (822.29297, 1050.0603), (990.5377, 2167.3167), (328.2101, 2246.1653)]"
+                    # [(189.96536, 1084.9089), (852.29297, 1006.0603), (990.5377, 2167.3167), (328.2101, 2246.1653)]
                     x1=x
                     y1=y
+                    # print(coords)
+
+                    # img1 = cv2.imread(img_for_box_extraction_path, 0)  # Read the image
+                    # cv2.drawContours(img1,c, -1, (0, 255, 255), 2)
+                    # cv2.circle(img1, (189,1084) , 8, (0, 0, 255), -1)
+                    # cv2.circle(img1, (852,1006) , 8, (0, 255, 0), -1)
+                    # cv2.circle(img1, (990,2167) , 8, (255, 0, 0), -1)
+                    # cv2.circle(img1, (328,2246) , 8, (255, 255, 0), -1)
+                    # cv2.imwrite('new.png', img1)
+
+
+                    # if((extLeft[1])>(extBot[1])):
+                    #     coords="[%s, %s, %s, %s]" %(extLeft,extTop,extRight,extBot)
+                    #
+                    # else:
+                    #     coords="[%s, %s, %s, %s]" %(extTop,extRight,extBot,extLeft)
+
+                    # print (extLeft)
+                    # print ("    ")
+                    # print(extRight)
+                    # print ("    ")
+                    # print (extTop)
+                    # print ("    ")
+                    # print(extBot)
+                    # print ("\n")
+
+                    # box = cv2.boxPoints(c)
+
+                    # coords=(str1+ (extLeft) + str3 + (extTop)+ str3 +(extRight)+ str3 + (extBot)+str2)
+
+
+                    # print(coords)
+
+                    # print (x1)
+                    # print ("    ")
+                    # print(w)
+                    # print ("\n")
+                    # print (h)
+                    # print ("\n")
+
 
 
 
@@ -118,16 +220,11 @@ for j in range(1, 68):
     dirname =("test/Cropped"+ str(j))
     os.mkdir(dirname)
 
-# for j in range(1, 11):
-# 	inputs = cv2.imread("result/result_" + str(j) + ".jpg",0)
-#
 
 
-# data/image_20.jpg
-
-for j in range(1, 68):
+for j in range(1,68):
     if((j!=26)and(j!=48)):
         box_extraction("data/image_"+str(j)+".jpg", "./test/Cropped"+str(j)+"/")
 
 
-# box_extraction("image_6.jpg", "./Cropped/")
+# box_extraction("image_312.jpg", "./Cropped/")
